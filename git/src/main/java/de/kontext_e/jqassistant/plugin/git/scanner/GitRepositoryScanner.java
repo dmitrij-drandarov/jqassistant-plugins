@@ -154,6 +154,10 @@ class GitRepositoryScanner {
         for (GitChange gitChange : gitCommit.getGitChanges()) {
             GitChangeDescriptor gitCommitFile = store.create(GitChangeDescriptor.class);
             gitCommitFile.setModificationKind(gitChange.getModificationKind());
+            gitCommitFile.setDeletions(gitChange.getDeletions());
+            gitCommitFile.setInsertions(gitChange.getInsertions());
+            gitCommitFile.setDeletionCharacters(gitChange.getDeletionCharacters());
+            gitCommitFile.setInsertionCharacters(gitChange.getInsertionCharacters());
             gitCommitDescriptor.getFiles().add(gitCommitFile);
             addAsGitFile(files, gitChange, gitCommitFile, gitCommit.getDate());
         }

@@ -1,7 +1,9 @@
 package de.kontext_e.jqassistant.plugin.git.scanner;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -98,7 +100,9 @@ class JGitScanner {
             LogCommand logCommand = getLogWithOrWithOutRange(git, range);
             Iterable<RevCommit> commits = logCommand.call();
 
-            DiffFormatter df = new DiffFormatter(DisabledOutputStream.INSTANCE);
+            OutputStream os = new ByteArrayOutputStream();
+            DiffFormatter df = new DiffFormatter(os);
+//            DiffFormatter df = new DiffFormatter(DisabledOutputStream.INSTANCE);
             df.setRepository(repository);
             df.setDiffComparator(RawTextComparator.DEFAULT);
             df.setDetectRenames(true);
@@ -113,7 +117,7 @@ class JGitScanner {
                 gitCommit.setMessage(commit.getFullMessage());
                 gitCommit.setShortMessage(commit.getShortMessage());
                 gitCommit.setEncoding(commit.getEncodingName());
-                addCommitParents(rw, df, commit, gitCommit);
+                addCommitParents(rw, df, os, commit, gitCommit);
 
                 result.add(gitCommit);
             }
@@ -140,17 +144,60 @@ class JGitScanner {
         return commits.get(sha);
     }
 
-    private void addCommitParents(final RevWalk rw, final DiffFormatter df, final RevCommit revCommit, final GitCommit gitCommit) throws IOException {
+    private void addCommitParents(final RevWalk rw, final DiffFormatter df, OutputStream os, final RevCommit revCommit, final GitCommit gitCommit) throws IOException {
         for (int i = 0; i < revCommit.getParentCount(); i++) {
             ObjectId parentId = revCommit.getParent(i).getId();
             RevCommit parent = rw.parseCommit(parentId);
 
             List<DiffEntry> diffs = df.scan(parent.getTree(), revCommit.getTree());
+            int insertions;
+            int deletions;
+            int insertionCharacters;
+            int deletionCharacters;
+
             for (DiffEntry diff : diffs) {
+                insertions = 0;
+                deletions = 0;
+                insertionCharacters = 0;
+                deletionCharacters = 0;
+
+
+                //                System.out.println("--------------------------");
+                //                System.out.println(df.toFileHeader(diff).getScriptText());
+//                System.out.println(diff.toString());
+//                System.out.println("-------------");
+
+                df.format(diff);
+                String[] changes = os.toString().split("\n");
+
+                for (String string : changes) {
+                    if (string.startsWith("+") && !string.startsWith("+++")) {
+                        insertions = insertions + 1;
+                        insertionCharacters = string.length() - 1;
+//                        System.out.println(string);
+                    }
+                    if (string.startsWith("-") && !string.startsWith("---")) {
+                        deletions = deletions +1;
+                        deletionCharacters = string.length() - 1;
+//                        System.out.println(string);
+                    }
+                }
+//                System.out.println("ins: " + insertions);
+//                System.out.println("del: " + deletions);
+//                System.out.println("insChar: " + insertionCharacters);
+//                System.out.println("delChar: " + deletionCharacters);
+
+                ((ByteArrayOutputStream) os).reset();
+//                System.out.println("--------------------------");
+
                 final GitChange gitChange = new GitChange(
                         diff.getChangeType().name(),
                         diff.getOldPath(),
-                        diff.getNewPath()
+                        diff.getNewPath(),
+                        deletions,
+                        insertions,
+                        deletionCharacters,
+                        insertionCharacters
                 );
                 logger.debug(gitChange.toString());
                 gitCommit.getGitChanges().add(gitChange);

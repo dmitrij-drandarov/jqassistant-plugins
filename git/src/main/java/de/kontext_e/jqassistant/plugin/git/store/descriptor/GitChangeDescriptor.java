@@ -11,6 +11,22 @@ public interface GitChangeDescriptor extends GitDescriptor {
     String getModificationKind();
     void setModificationKind(String modificationKind);
 
+    @Property("deletions")
+    Integer getDeletions();
+    void setDeletions(Integer deletions);
+
+    @Property("insertions")
+    Integer getInsertions();
+    void setInsertions(Integer insertions);
+
+    @Property("deletionCharacters")
+    Integer getDeletionCharacters();
+    void setDeletionCharacters(Integer deletionCharacters);
+
+    @Property("insertionCharacters")
+    Integer getInsertionCharacters();
+    void setInsertionCharacters(Integer insertionCharacters);
+
     @Relation("MODIFIES")
     GitFileDescriptor getModifies();
     void setModifies(GitFileDescriptor gitFileDescriptor);
